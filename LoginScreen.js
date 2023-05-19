@@ -8,9 +8,9 @@ const LoginScreen = () => {
   const navigation = useNavigation();
 
   const handleLogin = () => {
-    // 在这里实现登录逻辑，例如验证用户名和密码
+    // 在这里輸入登入邏輯
 
-    // 如果登录成功，请导航至主屏幕
+    // 如果登入成功進入主畫面
     navigation.navigate('Home');
   };
 

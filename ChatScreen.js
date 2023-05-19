@@ -50,14 +50,14 @@ const ChatScreen = ({ navigation, route }) => {
       const uri = recordingInstance.getURI();
       console.log('Recording stopped and saved to:', uri);
 
-      // 将录音文件作为消息添加到消息列表
+      // 將錄音文件作為消息添加到消息列表
       setMessages((prevMessages) => [
         ...prevMessages,
         { content: `錄音：${uri}`, sender: 'user', type: 'audio', uri },
       ]);
 
-      // 在此处处理录音文件，例如将其发送到服务器或转换为文本
-      setRecordingInstance(null); // 修改：在此处将 recordingInstance 设置为 null
+      // 在此處理錄音文件
+      setRecordingInstance(null); 
     } catch (error) {
       console.error('Error while stopping recording:', error);
     }
@@ -73,7 +73,7 @@ const ChatScreen = ({ navigation, route }) => {
     try {
       const sound = new Audio.Sound();
   
-      // 监听播放进度的回调
+      //監聽播放進度條
       sound.setOnPlaybackStatusUpdate((playbackStatus) => {
         if (playbackStatus.isLoaded) {
           setPlaybackProgress((prevState) => ({
@@ -134,7 +134,7 @@ const ChatScreen = ({ navigation, route }) => {
           onPressIn={startRecording} // 修改：直接使用 startRecording 函数
           onPressOut={stopRecording} // 修改：直接使用 stopRecording 函数
       >
-          <Text style={styles.recordButtonText}>{isRecording ? '停止录音' : '开始录音'}</Text>
+          <Text style={styles.recordButtonText}>{isRecording ? '停止錄音' : '開始錄音'}</Text>
       </TouchableOpacity>
         <TextInput
             style={styles.input}
