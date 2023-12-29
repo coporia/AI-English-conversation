@@ -10,30 +10,20 @@ const AccountScreen = ({ navigation }) => {
       case 'grammar':
         return (
           <View style={styles.contentBox}>
-            <Text>这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
-            这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
-            这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
-            这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
-            这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
-            这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
-            这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
-            这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
-            这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
-            这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
-            这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容这里是文法建议的内容
+            <Text>這裡包含文法建議的內容
             </Text>
           </View>
         );
       case 'vocabulary':
         return (
           <View style={styles.contentBox}>
-            <Text>这里是词汇的内容</Text>
+            <Text>这里是單字的内容</Text>
           </View>
         );
       case 'dialogue':
         return (
           <View style={styles.contentBox}>
-            <Text>这里是对话语句的内容</Text>
+            <Text>这里是對話語句的内容</Text>
           </View>
         );
       default:
@@ -57,19 +47,19 @@ const AccountScreen = ({ navigation }) => {
             style={styles.guideButton}
             onPress={() => setSelectedContent('grammar')}
           >
-            <Text style={styles.accountName}>文法建议</Text>
+            <Text style={styles.accountName}>文法建議</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.guideButtonMid}
             onPress={() => setSelectedContent('vocabulary')}
           >
-            <Text style={styles.accountName}>词  彙</Text>
+            <Text style={styles.accountName}>單字</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.guideButtonMid}
             onPress={() => setSelectedContent('dialogue')}
           >
-            <Text style={styles.accountName}>对话语句</Text>
+            <Text style={styles.accountName}>對話語句</Text>
           </TouchableOpacity>
         </View>
 
@@ -148,14 +138,14 @@ const styles = StyleSheet.create({
   },
   contentContainer: {
     paddingHorizontal: 10, // 从20减小到10
-    paddingVertical: 10, // 添加垂直内边距
+    paddingVertical: 10, // 添加垂直内邊距
     marginTop: 10,
     backgroundColor: '#fff',
     borderRadius: 5,
-    marginLeft: 20, // 添加左外边距
-    marginRight: 20, // 添加右外边距
+    marginLeft: 20, // 添加左外邊距
+    marginRight: 20, // 添加右外邊距
     flexGrow: 1,
-    marginBottom: 60, // 为底部导航留出空间
+    marginBottom: 60, // 為底部的導覽列留一點空間
   },
   footerContainer: {
     position: 'absolute',

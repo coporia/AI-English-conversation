@@ -1,5 +1,5 @@
 import { useNavigation } from '@react-navigation/native';
-import React from 'react';
+import React, {useState} from 'react';
 import Icon from 'react-native-vector-icons/Ionicons';
 import {
   ScrollView,
@@ -11,6 +11,41 @@ import {
 
 const HomeScreen = () => {
   const navigation = useNavigation();
+  const [initialMessage, setInitialMessage] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const fetchInitialConversation = async (topic) => {
+    setLoading(true);
+    try {
+      // 替換為您的 API 端點
+      const response = await fetch(`http://192.168.56.1:4000/api/start-conversation`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: 'user123', topic }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data.message;
+    } catch (error) {
+      console.error('Error:', error);
+      setInitialMessage('Error fetching initial conversation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleTopicPress = async (topic, title) => {
+    const initialMessage = await fetchInitialConversation(topic);
+    navigation.navigate('ChatScreen', { title: title, titleMessage: initialMessage });
+  };
+
+ 
   return (
     <View style={styles.screenContainer}>
       <ScrollView style={styles.contentContainer}>
@@ -18,8 +53,8 @@ const HomeScreen = () => {
 
         <TouchableOpacity
           style={styles.freeChatButton}
-          onPress={() => navigation.navigate('ChatScreen', { title: '自由對話' })}
-        >
+          onPress={() => handleTopicPress('FreeTalk', '自由對話')}
+        > 
           <View style={styles.leftSide}>
             <Icon name="chatbubbles-outline" size={60} color="#900" />
           </View>
@@ -36,7 +71,7 @@ const HomeScreen = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.buttonRow}
           >
-            <TouchableOpacity style={styles.buttonHorizontal} onPress={() => navigation.navigate('ChatScreen', { title: '自我介紹' })}>
+            <TouchableOpacity style={styles.buttonHorizontal} onPress={() => handleTopicPress('Self-introduction', '自我介紹')}>
               <View style={styles.leftSide}>
                 <Icon name="person-add-outline" size={20} color="#900" />
               </View>
@@ -44,7 +79,7 @@ const HomeScreen = () => {
                 <Text style={styles.buttonText}>自我介紹</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonHorizontal} onPress={() => navigation.navigate('ChatScreen', { title: '基本問候' })}>
+            <TouchableOpacity style={styles.buttonHorizontal} onPress={() => handleTopicPress('Daily Greetings', '日常問候')}>
               <View style={styles.leftSide}>
                 <Icon name="people-outline" size={25} color="#900" />
               </View>
@@ -52,7 +87,7 @@ const HomeScreen = () => {
                 <Text style={styles.buttonText}>基本問候</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonHorizontal} onPress={() => navigation.navigate('ChatScreen', { title: '按鈕1' })}>
+            <TouchableOpacity style={styles.buttonHorizontal} onPress={() => handleTopicPress('Self-introduction', '自我介紹')}>
               <View style={styles.leftSide}>
                 <Icon name="chatbubbles-outline" size={20} color="#900" />
               </View>
@@ -69,7 +104,7 @@ const HomeScreen = () => {
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.buttonRow}
           >
-            <TouchableOpacity style={styles.buttonHorizontal} onPress={() => navigation.navigate('ChatScreen', { title: '問   路' })}>
+            <TouchableOpacity style={styles.buttonHorizontal} onPress={() => handleTopicPress('Asking for Directions Scenario', '問路')}>
               <View style={styles.leftSide}>
                 <Icon name="chatbubbles-outline" size={20} color="#900" />
               </View>
@@ -77,7 +112,7 @@ const HomeScreen = () => {
                 <Text style={styles.buttonText}>問      路</Text>
               </View>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.buttonHorizontal} onPress={() => navigation.navigate('ChatScreen', { title: '觀   光' })}>
+            <TouchableOpacity style={styles.buttonHorizontal} onPress={() => handleTopicPress('Tourism and Travel Scenario', '觀光')}>
               <View style={styles.leftSide}>
               <Icon name="leaf-outline" size={20} color="#900" />
           </View>
@@ -94,7 +129,7 @@ const HomeScreen = () => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.buttonRow}
       >
-        <TouchableOpacity style={styles.buttonHorizontal} onPress={() => navigation.navigate('ChatScreen', { title: '閱   讀' })}>
+        <TouchableOpacity style={styles.buttonHorizontal} onPress={() => handleTopicPress('Book Recommendations', '閱讀')}>
           <View style={styles.leftSide}>
             <Icon name="book-outline" size={20} color="#900" />
           </View>
@@ -102,7 +137,7 @@ const HomeScreen = () => {
             <Text style={styles.buttonText}>閱      讀</Text>
           </View>
         </TouchableOpacity>
-        <TouchableOpacity style={styles.buttonHorizontal} onPress={() => navigation.navigate('ChatScreen', { title: '煮   飯' })}>
+        <TouchableOpacity style={styles.buttonHorizontal} onPress={() => handleTopicPress('Cooking Related', '烹飪')}>
           <View style={styles.leftSide}>
             <Icon name="fast-food-outline" size={20} color="#900" />
           </View>
@@ -119,7 +154,7 @@ const HomeScreen = () => {
         showsHorizontalScrollIndicator={false}
         contentContainerStyle={styles.buttonRow}
       >
-        {/* Add your buttons here */}
+        
       </ScrollView>
     </View>
     <View style={styles.footerSpacer} />

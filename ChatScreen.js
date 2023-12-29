@@ -1,21 +1,80 @@
 import { View, Text, TouchableOpacity, StyleSheet, ScrollView, TextInput } from 'react-native'
 import { Audio } from 'expo-av';
 import ProgressBar from 'react-native-progress/Bar';
-//import { ErrorSuggestionContext } from './contexts/ErrorSuggestionContext';
-import React, { useState, useContext } from 'react'; // <- 添加 useContext
+import React, { useState, useEffect } from 'react'; 
+import * as FileSystem from "expo-file-system";
+import {
+  AndroidAudioEncoder,
+  AndroidOutputFormat,
+  IOSAudioQuality,
+  IOSOutputFormat,
+  Recording,
+} from 'expo-av/build/Audio';
 
 const ChatScreen = ({ navigation, route }) => {
   const { title } = route.params;
+  const { titleMessage } = route.params; 
   const [messages, setMessages] = useState([]);
   const [inputValue, setInputValue] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingInstance, setRecordingInstance] = useState(null); // 新增的狀態
   const [playbackProgress, setPlaybackProgress] = useState({});
-  //const { errorSuggestions, setErrorSuggestions } = useContext(ErrorSuggestionContext);
 
+  const handleSendMessage = async (userMessage = inputValue) => {
+    // 添加用户消息到消息列表
+    setMessages(prevMessages => {
+      const newUserMessage = {
+        content: userMessage,
+        sender: 'user',
+      };
+      return [...prevMessages, newUserMessage];
+    });
+    
   
+    try {
+      // 向后端发送请求并获取回复
+      const response = await fetch(`http://192.168.56.1:4000/api/reply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userId: 'user123', message: userMessage }),
+      });
   
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
   
+      const data = await response.json();
+      console.log(data);
+      const grammarCorrection = data.grammarCorrection;
+      const botReply = data.nextMessage; // 假设这是后端回复的字段
+  
+      // 如果有语法纠正信息，添加到消息列表
+      if (grammarCorrection) {
+        setMessages(prevMessages => [...prevMessages, { content: grammarCorrection, sender: 'common' }]);
+      }
+  
+      // 添加机器人回复到消息列表
+      setMessages(prevMessages => [...prevMessages, { content: botReply, sender: 'bot' }]);
+  
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // 可以选择在聊天中显示错误消息
+      setMessages(prevMessages => [...prevMessages, { content: 'Error fetching reply', sender: 'bot' }]);
+    }
+  
+    // 清空输入
+    setInputValue('');
+  };
+  
+
+  useEffect(() => {
+    if (titleMessage) {
+      setMessages([{ content: titleMessage, sender: 'bot' }]);
+    }
+  }, [titleMessage]); 
+ 
   const startRecording = async () => {
     try {
       if (recordingInstance) {
@@ -28,11 +87,34 @@ const ChatScreen = ({ navigation, route }) => {
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
-  
-      const recording = new Audio.Recording();
-      await recording.prepareToRecordAsync(Audio.RecordingOptionsPresets.HighQuality);
-      await recording.startAsync();
       setIsRecording(true);
+      const { recording } = await Audio.Recording.createAsync({
+        isMeteringEnabled: true,
+        android: {
+          extension: '.wav',
+          outputFormat: AndroidOutputFormat.MPEG_4,
+          audioEncoder: AndroidAudioEncoder.AAC,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+        },
+        ios: {
+          extension: '.wav',
+          outputFormat: IOSOutputFormat.MPEG4AAC,
+          audioQuality: IOSAudioQuality.MAX,
+          sampleRate: 44100,
+          numberOfChannels: 2,
+          bitRate: 128000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/webm',
+          bitsPerSecond: 128000,
+        },
+      });
+      console.log('Recording started');
       setRecordingInstance(recording);
     } catch (error) {
       console.error('Error while starting recording:', error);
@@ -48,32 +130,54 @@ const ChatScreen = ({ navigation, route }) => {
       await recordingInstance.stopAndUnloadAsync(); // 修改：直接使用 recordingInstance
       setIsRecording(false);
       const uri = recordingInstance.getURI();
-      console.log('Recording stopped and saved to:', uri);
+      const info = await FileSystem.getInfoAsync( uri || "");
+      console.log(`FILE INFO: ${JSON.stringify(info)}`);
+      console.log('錄音完成，檔案路徑:', uri);
+      uploadAudioFile(uri);
 
-      // 将录音文件作为消息添加到消息列表
+      // 將錄音文件作為消息添加到消息列表
       setMessages((prevMessages) => [
         ...prevMessages,
         { content: `錄音：${uri}`, sender: 'user', type: 'audio', uri },
       ]);
 
-      // 在此处处理录音文件，例如将其发送到服务器或转换为文本
-      setRecordingInstance(null); // 修改：在此处将 recordingInstance 设置为 null
+      // 在此處理錄音文件
+      setRecordingInstance(null); 
     } catch (error) {
       console.error('Error while stopping recording:', error);
     }
   };
 
-  const generateBotReply = (userInput) => {
-    // 在這裡根據用戶輸入生成機器人的回覆
-    const botReply = "您好，我是機器人。";
-    return botReply;
+  const uploadAudioFile = async (filePath) => {
+    try {
+      const result = await FileSystem.uploadAsync('http://192.168.56.1:4000/api/speech-to-text', filePath, {
+        fieldName: 'file',
+        httpMethod: 'PATCH',
+        uploadType: FileSystem.FileSystemUploadType.BINARY_CONTENT,
+      });
+      console.log('檔案上傳結果:', result);
+      const responseData = JSON.parse(result.body);
+      console.log('轉換後的文字:', responseData.text);
+
+      if (responseData.text) {
+        handleSendMessage(responseData.text);
+      } else {
+        // 如果轉寫文本為空，提示用戶使用英文錄音
+        setMessages(prevMessages => [...prevMessages, { content: '請使用英文進行錄音。', sender:  'system' }]);
+      }
+      
+
+        // TODO: 在此处将转换后的文本显示在应用中
+    } catch (error) {
+      console.error('檔案上傳出錯:', error);
+    }
   };
 
   const playAudio = async (uri) => {
     try {
       const sound = new Audio.Sound();
   
-      // 监听播放进度的回调
+      //監聽播放進度條
       sound.setOnPlaybackStatusUpdate((playbackStatus) => {
         if (playbackStatus.isLoaded) {
           setPlaybackProgress((prevState) => ({
@@ -91,12 +195,14 @@ const ChatScreen = ({ navigation, route }) => {
   };
   
   const renderMessages = () =>
-    messages.map((message, index) => (
+  messages.map((message, index) => (
+    <View key={index} style={styles.messageBlock}>
       <View
-        key={index}
         style={[
           styles.messageContainer,
           message.sender === 'bot' ? styles.botMessage : styles.userMessage,
+          message.sender === 'common' ? styles.correctionMessageContainer : {},
+          message.sender === 'system' ? styles.correctionMessageContainer : {},
         ]}
       >
         {message.type === 'audio' ? (
@@ -114,13 +220,32 @@ const ChatScreen = ({ navigation, route }) => {
             />
           </TouchableOpacity>
         ) : (
-          <Text style={styles.messageText}>
-            {message.sender === 'user' ? '用戶：' : '機器人：'}
-            {message.content}
-          </Text>
+          <>
+            <Text style={styles.messageText}>
+              {message.sender === 'user' && '用戶：'}
+              {message.sender === 'bot' && '機器人：'}
+              {message.sender === 'common' && '建議：'}
+              {message.sender === 'system' && '系統：'}
+              {message.content}
+            </Text>
+          </>
         )}
       </View>
-    ));
+    </View>
+  ));
+
+  const userId = 'user123'; // 举例，实际情况可能不同
+
+  const handleEndConversation = () => {
+    navigation.navigate('RatingScreen', { userId });
+  };
+
+  const onSendPress = () => {
+    // 只有當 input 有值時才調用 handleSendMessage
+    if (inputValue) {
+      handleSendMessage(inputValue);
+    }
+  };
 
   return (
     <View style={styles.screenContainer}>
@@ -131,41 +256,29 @@ const ChatScreen = ({ navigation, route }) => {
       <View style={styles.footerContainer}>
       <TouchableOpacity
           style={styles.recordButton}
-          onPressIn={startRecording} // 修改：直接使用 startRecording 函数
-          onPressOut={stopRecording} // 修改：直接使用 stopRecording 函数
+          onPressIn={startRecording} 
+          onPressOut={stopRecording} 
       >
-          <Text style={styles.recordButtonText}>{isRecording ? '停止录音' : '开始录音'}</Text>
+          <Text style={styles.recordButtonText}>{isRecording ? '停止錄音' : '開始錄音'}</Text>
       </TouchableOpacity>
         <TextInput
             style={styles.input}
             onChangeText={text => setInputValue(text)}
             value={inputValue}
             placeholder="請輸入您的消息"
+            editable={!isRecording} // 当录音时禁用输入框
         />
         <TouchableOpacity
             style={styles.sendButton}
-            onPress={() => {
-              setMessages([...messages, { content: inputValue, sender: 'user' }]);
-              setInputValue('');
-
-              // 生成機器人的回覆並添加到消息列表
-              const botReply = generateBotReply(inputValue);
-              setMessages((prevMessages) => [...prevMessages, { content: botReply, sender: 'bot' }]);
-            }}
-          >
-          <Text style={styles.sendButtonText}>發送</Text>
+            onPress={onSendPress}
+            disabled={isRecording}
+        >
+            <Text style={styles.sendButtonText}>發送</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
             style={styles.footerButton}
-            onPress={() => {
-              const errors = [
-                { message: '錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤', suggestion: '建議建議建議建議建議建議建議建議建議建議建議建議建議建議建議建議建議' },
-                { message: '錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤錯誤', suggestion: '建議建議建議建議建議建議建議建議建議建議建議建議建議建議建議建議建議' },
-                // 更多錯誤和建議
-              ];
-              navigation.navigate('SuggestionScreen', { errors });
-            }}
+            onPress={handleEndConversation}
         >
             <Text style={styles.footerButtonText}>結束對話</Text>
         </TouchableOpacity>
@@ -244,6 +357,10 @@ const styles = StyleSheet.create({
     backgroundColor: '#0084ff',
     alignSelf: 'flex-end',
   },
+  correctionMessageContainer: {
+    backgroundColor: '#ff6347',
+    alignSelf: 'flex-end',
+  },
   botMessage: {
     backgroundColor: '#e5e5e5',
   },
@@ -261,6 +378,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
+  },
+   correctionText: {
+    marginTop: 4,
+    fontSize: 14,
+    color: 'grey', 
+  },
+  messageBlock: {
+    marginBottom: 10,
   },
 });
 
